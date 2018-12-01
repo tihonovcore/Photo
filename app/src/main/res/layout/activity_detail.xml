@@ -21,4 +21,16 @@
         android:textColor="@color/black"
         android:textSize="20sp" />
 
+    <Switch
+        android:id="@+id/favorite"
+        android:layout_width="match_parent"
+        android:layout_height="45dp"
+        android:text="@string/favorite" />
+
+    <Button
+        android:id="@+id/button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Button" />
+
 </LinearLayout>

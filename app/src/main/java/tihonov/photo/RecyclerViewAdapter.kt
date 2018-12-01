@@ -8,9 +8,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.RelativeLayout
 import android.widget.TextView
-import java.util.ArrayList
+import android.widget.Toast
 
-class RecyclerViewAdapter(val context: Context, val userName: ArrayList<String>, val imagesUrl: ArrayList<String>) : RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>() {
+class RecyclerViewAdapter(val context: Context, val userName: List<String>, val imageUrl: List<String>) : RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, i: Int): ViewHolder {
         return ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.layout_list, parent, false))
@@ -20,7 +20,7 @@ class RecyclerViewAdapter(val context: Context, val userName: ArrayList<String>,
         holder.imageName.text = userName[ind]
         holder.parentLayout.setOnClickListener {
             val intent = Intent(context, DetailsActivity::class.java)
-            intent.putExtra("image_url", imagesUrl[ind])
+            intent.putExtra("image_url", imageUrl[ind])
             intent.putExtra("user_name", userName[ind])
             context.startActivity(intent)
         }
@@ -34,4 +34,5 @@ class RecyclerViewAdapter(val context: Context, val userName: ArrayList<String>,
         internal var imageName: TextView = itemView.findViewById(R.id.image_name)
         internal var parentLayout: RelativeLayout = itemView.findViewById(R.id.parent_layout)
     }
+
 }
