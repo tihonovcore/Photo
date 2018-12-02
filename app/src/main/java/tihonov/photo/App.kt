@@ -17,7 +17,7 @@ interface FavPicDao {
     val all: MutableList<FavPic>
 
     @Query("SELECT * FROM favpic WHERE id = :id")
-    fun getById(id: Long): FavPic
+    fun getById(id: Long): FavPic?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insert(pic: FavPic)

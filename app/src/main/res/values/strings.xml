@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Photo</string>
     <string name="favorite">Add to Favorite</string>
+    <string name="favpic">FavPic</string>
 </resources>
