@@ -2,4 +2,7 @@
     <string name="app_name">Photo</string>
     <string name="favorite">Add to Favorite</string>
     <string name="favpic">FavPic</string>
+    <string name="add">Добавлено в избранное</string>
+    <string name="remove">Удалено из избранного</string>
+    <string name="favoritePic">Избранное</string>
 </resources>

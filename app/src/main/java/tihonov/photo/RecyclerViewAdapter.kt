@@ -8,9 +8,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.RelativeLayout
 import android.widget.TextView
-import android.widget.Toast
 
-class RecyclerViewAdapter(val context: Context, var userName: List<String>, var imageUrl: List<String>) : RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>() {
+class RecyclerViewAdapter(private val context: Context, private val userName: List<String>,
+                          private val imageUrl: List<String>) : RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, i: Int): ViewHolder {
         return ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.layout_list, parent, false))
@@ -29,7 +29,6 @@ class RecyclerViewAdapter(val context: Context, var userName: List<String>, var 
     override fun getItemCount(): Int {
         return userName.size
     }
-
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         internal var imageName: TextView = itemView.findViewById(R.id.image_name)

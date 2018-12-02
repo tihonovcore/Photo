@@ -5,17 +5,16 @@ import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
-import android.widget.Toast
 import kotlin.concurrent.thread
 
 class FavActivity : AppCompatActivity() {
 
-    var userName = ArrayList<String>()
-    var imageUrl = ArrayList<String>()
+    private var userName = ArrayList<String>()
+    private var imageUrl = ArrayList<String>()
 
-    val db = Room.databaseBuilder(this, AppDatabase::class.java, "database")
+    private val db = Room.databaseBuilder(this, AppDatabase::class.java, "database")
             .build()
-    val favPicDao: FavPicDao = db.favpicDao()
+    private val favPicDao: FavPicDao = db.favpicDao()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,6 +23,7 @@ class FavActivity : AppCompatActivity() {
         thread {
             getList()
         }.join()
+
         startRecyclerView(userName, imageUrl)
     }
 
@@ -51,6 +51,7 @@ class FavActivity : AppCompatActivity() {
         thread {
             getList()
         }.join()
+
         startRecyclerView(userName, imageUrl)
     }
 }

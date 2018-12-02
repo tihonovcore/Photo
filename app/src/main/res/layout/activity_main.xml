@@ -22,7 +22,7 @@
         android:layout_alignParentEnd="true"
         android:layout_marginBottom="27dp"
         android:layout_marginEnd="26dp"
-        android:text="@string/favpic" />
+        android:text="@string/favoritePic" />
 
     <SearchView
         android:id="@+id/searchView"
