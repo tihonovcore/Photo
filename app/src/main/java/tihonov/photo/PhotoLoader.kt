@@ -6,6 +6,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.*
 import tihonov.photo.DetailsActivity.Companion.PHOTO_URL
+import java.io.File
+import java.io.FileOutputStream
 import java.net.URL
 
 class PhotoLoader : IntentService("PhotoLoader") {
@@ -18,6 +20,13 @@ class PhotoLoader : IntentService("PhotoLoader") {
         val url = URL(path)
         url.openConnection()
         val bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+
+        val file = File(filesDir, path.hashCode().toString() + ".jpg")
+        file.createNewFile()
+        val stream: FileOutputStream? = FileOutputStream(file)
+        bmp.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        stream?.close()
+
         handler.post {
             callback(bmp)
         }

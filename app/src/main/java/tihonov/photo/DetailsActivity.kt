@@ -15,10 +15,9 @@ import java.io.FileOutputStream
 
 class DetailsActivity : AppCompatActivity() {
 
-    var urlStr = ""
-    lateinit var file: File
-
+    private var urlStr = ""
     private var bind = false
+    private lateinit var file: File
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,22 +41,20 @@ class DetailsActivity : AppCompatActivity() {
         }
     }
 
-    var binder: PhotoLoader.MyBinder? = null
+    private var binder: PhotoLoader.MyBinder? = null
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             bind = true
             binder = service as PhotoLoader.MyBinder
+
             binder!!.setCallback { p ->
                 myImage.setImageBitmap(p)
-                file.createNewFile()
-                val stream: FileOutputStream? = FileOutputStream(file)
-                p.compress(Bitmap.CompressFormat.PNG, 100, stream)
-                stream?.close()
             }
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
             bind = false
+            binder = null
         }
     }
 

@@ -14,7 +14,7 @@ import com.google.gson.reflect.TypeToken
 
 class MainActivity : AppCompatActivity() {
 
-    var bind = false
+    private var bind = false
 
     data class Urls(var full: String?, var regular: String?)
     data class User(var name: String?)
@@ -44,8 +44,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    var binder: StringLoader.MyBinder? = null
-    val serviceConnection = object : ServiceConnection {
+    private var binder: StringLoader.MyBinder? = null
+    private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             bind = true
             binder = service as StringLoader.MyBinder
@@ -54,6 +54,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onServiceDisconnected(name: ComponentName) {
             bind = false
+            binder = null
         }
     }
 
@@ -79,6 +80,14 @@ class MainActivity : AppCompatActivity() {
         val adapter = RecyclerViewAdapter(this, userName, imageUrl)
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (bind) {
+            bind = false
+            unbindService(serviceConnection)
+        }
     }
 
     companion object {
