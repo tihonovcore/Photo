@@ -1,44 +1,152 @@
 package tihonov.photo
 
-import android.os.AsyncTask
-import android.os.Bundle
+import android.content.Intent
+import android.os.*
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
-import com.google.gson.Gson
-import java.lang.ref.WeakReference
-import java.net.URL
-import java.util.ArrayList
-import com.google.gson.reflect.TypeToken
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
+import tihonov.photo.api.Photo
+import tihonov.photo.api.UnsplashApi
+import android.widget.SearchView
+import kotlinx.android.synthetic.main.activity_main.*
+import android.view.WindowManager
+import android.widget.Button
+import android.widget.Toast
 
 class MainActivity : AppCompatActivity() {
 
-    data class Urls(var full: String?, var regular: String?)
-    data class User(var name: String?)
-    data class Photo(var id: String?, var description: String?, var urls: Urls?, var user: User?)
+    private val handler = Handler(Looper.getMainLooper())
+
+    private lateinit var api: UnsplashApi
+    private var userCall: Call<List<Photo>>? = null
+
+    private lateinit var search: SearchView
+    private lateinit var recycler: RecyclerView
+    private lateinit var button: Button
 
     private var userName = ArrayList<String>()
     private var imageUrl = ArrayList<String>()
-    private lateinit var downloadTask: MainActivity.DownloadPostsAsyncTask
-    var unsplashAnswer: String? = null
 
+    private var query = "beautiful-girls"
     private val API = "https://api.unsplash.com/photos/"
-    private val SETTINGS = "random/?count=30"
-    private val CLIENT_ID = "d3b053ebcb9d702a5612e128b366cfb4f14dbfd72b2d08fd995a990c08611719"
 
+    private lateinit var instance: Instance
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        instance = applicationContext as Instance
+        recycler = recyclerView
+        search = searchView
+
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(_query: String): Boolean {
+                query = _query
+                userName = ArrayList()
+                imageUrl = ArrayList()
+                recycler.removeAllViewsInLayout()
+                downloadList()
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String): Boolean {
+                return false
+            }
+        })
+
+        button = button2
+        button.setOnClickListener {
+            val myIntent = Intent(this@MainActivity, FavActivity::class.java)
+            this@MainActivity.startActivity(myIntent)
+        }
+
+        @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
         if (savedInstanceState == null) {
-            downloadTask = MainActivity.DownloadPostsAsyncTask(WeakReference(this))
-            downloadTask.execute(URL("$API$SETTINGS&client_id=$CLIENT_ID"))
+            downloadList()
         } else {
-            imageUrl = savedInstanceState.getStringArrayList(URLS)
             userName = savedInstanceState.getStringArrayList(NAMES)
+            imageUrl = savedInstanceState.getStringArrayList(URLS)
+
             startRecyclerView()
         }
+    }
+
+    private fun createApi(): UnsplashApi {
+        return Retrofit.Builder()
+                .baseUrl(API)
+                .client(instance.client)
+                .addConverterFactory(MoshiConverterFactory.create(instance.moshi))
+                .build()
+                .create(UnsplashApi::class.java)
+    }
+
+    fun downloadList() {
+        api = createApi()
+
+        if (userCall != null) {
+            userCall!!.cancel()
+        }
+
+        val map = mapOf(
+                "query" to query,
+                "count" to "30",
+                "client_id" to "d3b053ebcb9d702a5612e128b366cfb4f14dbfd72b2d08fd995a990c08611719"
+        )
+
+        userCall = api.getPhotoList(map)
+        userCall!!.enqueue(object : Callback<List<Photo>> {
+            override fun onResponse(call: Call<List<Photo>>, response: Response<List<Photo>>) {
+                if (!response.isSuccessful || response.body() == null) {
+                    val errorBody = response.errorBody()
+                    val str = errorBody?.string()
+                    onFailure(call, Throwable(str))
+                    return
+                }
+
+                val users = response.body()
+                if (users == null) onFailure(call, IllegalArgumentException("Users were null"))
+
+                handler.post {
+                    for (user in users!!) {
+                        userName.add(user.user.name)
+                        imageUrl.add(user.urls.regular)
+                    }
+                    startRecyclerView()
+                }
+            }
+
+            override fun onFailure(call: Call<List<Photo>>, t: Throwable) {
+                Toast.makeText(applicationContext, t.message,
+                        Toast.LENGTH_SHORT).show()
+            }
+
+        })
+    }
+
+    private fun startRecyclerView() {
+        val adapter = RecyclerViewAdapter(this, userName, imageUrl)
+        recycler.adapter = adapter
+        recycler.layoutManager = LinearLayoutManager(this)
+    }
+
+    override fun onRestart() {
+        super.onRestart()
+        window.setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
+        )
+    }
+
+    override fun onResume() {
+        super.onResume()
+        window.setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
+        )
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -47,39 +155,9 @@ class MainActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
     }
 
-    private class DownloadPostsAsyncTask(val activity: WeakReference<MainActivity>) : AsyncTask<URL, Int, String>() {
-        override fun onPostExecute(res: String?) {
-            activity.get()?.let {
-                it.unsplashAnswer = res
-                if (res != null) {
-                    it.parseJson()
-                }
-            }
-        }
-
-        override fun doInBackground(vararg params: URL): String {
-            return params[0].openConnection().run {
-                connect()
-                getInputStream().bufferedReader().readLines().joinToString("")
-            }
-        }
-    }
-
-    private fun parseJson() {
-        val list = Gson().fromJson<List<Photo>>(unsplashAnswer, object : TypeToken<List<Photo>>() {}.type)
-        for (photo in list) {
-            imageUrl.add(photo.urls!!.regular!!)
-            userName.add(photo.user!!.name!!)
-        }
-
-        startRecyclerView()
-    }
-
-    private fun startRecyclerView() {
-        val recyclerView = findViewById<RecyclerView>(R.id.recycler_view)
-        val adapter = RecyclerViewAdapter(this, userName, imageUrl)
-        recyclerView.adapter = adapter
-        recyclerView.layoutManager = LinearLayoutManager(this)
+    override fun onDestroy() {
+        super.onDestroy()
+        if (userCall != null) userCall!!.cancel()
     }
 
     companion object {

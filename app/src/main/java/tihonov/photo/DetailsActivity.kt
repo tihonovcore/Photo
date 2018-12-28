@@ -1,67 +1,97 @@
 package tihonov.photo
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.os.AsyncTask
+import android.content.ComponentName
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.IBinder
 import android.support.v7.app.AppCompatActivity
-import android.widget.TextView
+import android.widget.*
+import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_detail.*
-import java.io.IOException
-import java.lang.ref.WeakReference
-import java.net.URL
+import kotlin.concurrent.thread
 
-class DetailsActivity : AppCompatActivity() {
+class DetailsActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener {
 
-    private lateinit var downloadTask: DownloadPostsAsyncTask
+    private var urlAddress = ""
+    private lateinit var favorite: Switch
+    private lateinit var list: MutableList<FavPic>
+    private lateinit var instance: Instance
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
 
-        getIncomingIntent()
-    }
+        favorite = findViewById(R.id.favorite)
+        favorite.setOnCheckedChangeListener(this)
 
-    private fun getIncomingIntent() {
+        instance = applicationContext as Instance
         if (intent.hasExtra("image_url") && intent.hasExtra("user_name")) {
-            val name = findViewById<TextView>(R.id.image_description)
+            val name = image_description
             name.text = intent.getStringExtra("user_name")
+            urlAddress = intent.getStringExtra("image_url")
 
-            downloadTask = DownloadPostsAsyncTask(WeakReference(this))
-            downloadTask.execute(URL(intent.getStringExtra("image_url")))
+            val intent = Intent(this, DBgetById::class.java)
+            intent.putExtra("image_url", urlAddress)
+            bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+            startService(intent)
+
+            Picasso.get().load(urlAddress)
+                    .tag(MainActivity::class.java)
+                     .placeholder(R.color.colorAccent)
+                    .error(R.color.colorPrimaryDark)
+                    .into(myImage)
         }
     }
 
-    private class DownloadPostsAsyncTask(val activity: WeakReference<DetailsActivity>) : AsyncTask<URL, Int, Bitmap>() {
-        override fun onPostExecute(result: Bitmap?) {
-            activity.get()?.image?.setImageBitmap(result)
-        }
-
-        override fun doInBackground(vararg params: URL): Bitmap {
-            var res: ByteArray?
-            try {
-                val url = params[0]
-                var connection = url.openConnection()
-                connection.connect()
-                while (connection.contentLength < 0) {
-                    connection = url.openConnection()
-                    connection.connect()
+    var bind = false
+    private var binder: DBgetById.MyBinder? = null
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            bind = true
+            binder = service as DBgetById.MyBinder
+            binder!!.setCallback { pic ->
+                if (pic != null) {
+                    favorite.toggle()
                 }
-                res = ByteArray(connection.contentLength)
-                connection.getInputStream().use { iss ->
-                    var p = 0
-                    var r: Int = iss.read(res, p, res!!.size - p)
-                    while (r > 0){
-                        p += r
-                        r = iss.read(res, p, res!!.size - p)
-                    }
-                }
-            } catch (e: IOException) {
-                e.printStackTrace()
-                res = null
             }
+        }
 
-            return BitmapFactory.decodeByteArray(res, 0, res!!.size)
+        override fun onServiceDisconnected(name: ComponentName) {
+            bind = false
+            binder = null
         }
     }
+
+    override fun onCheckedChanged(buttonView: CompoundButton, isChecked: Boolean) {
+        Toast.makeText(
+                this,
+                getString(
+                        if (isChecked) R.string.add
+                        else R.string.remove
+                ),
+                Toast.LENGTH_SHORT
+        ).show()
+
+        thread {
+            if (isChecked) {
+                instance.favPicDao.insert(FavPic(urlAddress, intent.getStringExtra("user_name")))
+            } else {
+                instance.favPicDao.delete(FavPic(urlAddress, intent.getStringExtra("user_name")))
+            }
+            list = instance.favPicDao.all
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        if (bind) {
+            bind = false
+            unbindService(serviceConnection)
+        }
+
+        Picasso.get().cancelTag(MainActivity::class.java)
+    }
+
 }
