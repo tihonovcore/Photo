@@ -24,8 +24,6 @@ class MainActivity : AppCompatActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
 
-    private lateinit var client: OkHttpClient
-    private lateinit var moshi: Moshi
     private lateinit var api: UnsplashApi
     private var userCall: Call<List<Photo>>? = null
 
@@ -39,13 +37,13 @@ class MainActivity : AppCompatActivity() {
     private var query = "beautiful-girls"
     private val API = "https://api.unsplash.com/photos/"
 
+    private lateinit var instance: Instance
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        client = OkHttpClient.Builder().build()
-        moshi = Moshi.Builder().build()
-
+        instance = applicationContext as Instance
         recycler = recyclerView
         search = searchView
 
@@ -84,8 +82,8 @@ class MainActivity : AppCompatActivity() {
     private fun createApi(): UnsplashApi {
         return Retrofit.Builder()
                 .baseUrl(API)
-                .client(client)
-                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .client(instance.client)
+                .addConverterFactory(MoshiConverterFactory.create(instance.moshi))
                 .build()
                 .create(UnsplashApi::class.java)
     }
@@ -118,8 +116,8 @@ class MainActivity : AppCompatActivity() {
 
                 handler.post {
                     for (user in users!!) {
-                        userName.add(user.user!!.name!!)
-                        imageUrl.add(user.urls!!.regular!!)
+                        userName.add(user.user.name)
+                        imageUrl.add(user.urls.regular)
                     }
                     startRecyclerView()
                 }

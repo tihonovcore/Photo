@@ -1,44 +1,48 @@
 package tihonov.photo
 
-import android.arch.persistence.room.Room
+import android.content.ComponentName
+import android.content.Intent
+import android.content.ServiceConnection
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.os.IBinder
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
-import kotlin.concurrent.thread
 
 class FavActivity : AppCompatActivity() {
 
-    private var userName = ArrayList<String>()
-    private var imageUrl = ArrayList<String>()
-
-    private val db = Room.databaseBuilder(this, AppDatabase::class.java, "database")
-            .build()
-    private val favPicDao: FavPicDao = db.favpicDao()
+    private var userName: List<String> = ArrayList()
+    private var imageUrl: List<String> = ArrayList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_fav)
 
-        thread {
-            getList()
-        }.join()
-
-        startRecyclerView(userName, imageUrl)
+        val intent = Intent(this, DBReader::class.java)
+        bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+        startService(intent)
     }
 
-    private fun getList() {
-        userName = ArrayList()
-        imageUrl = ArrayList()
+    var bind = false
+    private var binder: DBReader.MyBinder? = null
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            bind = true
+            binder = service as DBReader.MyBinder
+            binder!!.setCallback { names, urls ->
+                userName = names
+                imageUrl = urls
+                startRecyclerView(userName, imageUrl)
+            }
+        }
 
-        val list = favPicDao.all
-        for (curr in list) {
-            userName.add(curr.userName!!)
-            imageUrl.add(curr.url)
+        override fun onServiceDisconnected(name: ComponentName) {
+            bind = false
+            binder = null
         }
     }
 
-    private fun startRecyclerView(userName: ArrayList<String>, imageUrl: ArrayList<String>) {
+    private fun startRecyclerView(userName: List<String>, imageUrl: List<String>) {
         val recyclerView = findViewById<RecyclerView>(R.id.favRecyclerView)
         val adapter = RecyclerViewAdapter(applicationContext, userName, imageUrl)
         recyclerView.adapter = adapter
@@ -48,10 +52,8 @@ class FavActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        thread {
-            getList()
-        }.join()
-
-        startRecyclerView(userName, imageUrl)
+        val intent = Intent(this, DBReader::class.java)
+        bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+        startService(intent)
     }
 }

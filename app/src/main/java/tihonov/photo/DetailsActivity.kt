@@ -1,7 +1,10 @@
 package tihonov.photo
 
-import android.arch.persistence.room.Room
+import android.content.ComponentName
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.IBinder
 import android.support.v7.app.AppCompatActivity
 import android.widget.*
 import com.squareup.picasso.Picasso
@@ -12,11 +15,8 @@ class DetailsActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListe
 
     private var urlAddress = ""
     private lateinit var favorite: Switch
-    private var list: MutableList<FavPic> = ArrayList()
-
-    private val db = Room.databaseBuilder(this, AppDatabase::class.java, "database")
-            .build()
-    private val favPicDao: FavPicDao = db.favpicDao()
+    private lateinit var list: MutableList<FavPic>
+    private lateinit var instance: Instance
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,26 +25,41 @@ class DetailsActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListe
         favorite = findViewById(R.id.favorite)
         favorite.setOnCheckedChangeListener(this)
 
+        instance = applicationContext as Instance
         if (intent.hasExtra("image_url") && intent.hasExtra("user_name")) {
             val name = image_description
             name.text = intent.getStringExtra("user_name")
             urlAddress = intent.getStringExtra("image_url")
 
-            var flag = false
-            thread {
-                val a = favPicDao.getById(urlAddress.hashCode().toLong())
-                if (a != null) flag = true
-            }.join()
-
-            if (flag) {
-                favorite.toggle()
-            }
+            val intent = Intent(this, DBgetById::class.java)
+            intent.putExtra("image_url", urlAddress)
+            bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+            startService(intent)
 
             Picasso.get().load(urlAddress)
                     .tag(MainActivity::class.java)
-                    .placeholder(R.color.colorAccent)
+                     .placeholder(R.color.colorAccent)
                     .error(R.color.colorPrimaryDark)
                     .into(myImage)
+        }
+    }
+
+    var bind = false
+    private var binder: DBgetById.MyBinder? = null
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            bind = true
+            binder = service as DBgetById.MyBinder
+            binder!!.setCallback { pic ->
+                if (pic != null) {
+                    favorite.toggle()
+                }
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            bind = false
+            binder = null
         }
     }
 
@@ -60,11 +75,11 @@ class DetailsActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListe
 
         thread {
             if (isChecked) {
-                favPicDao.insert(FavPic(urlAddress, intent.getStringExtra("user_name")))
+                instance.favPicDao.insert(FavPic(urlAddress, intent.getStringExtra("user_name")))
             } else {
-                favPicDao.delete(FavPic(urlAddress, intent.getStringExtra("user_name")))
+                instance.favPicDao.delete(FavPic(urlAddress, intent.getStringExtra("user_name")))
             }
-            list = favPicDao.all
+            list = instance.favPicDao.all
         }
     }
 
