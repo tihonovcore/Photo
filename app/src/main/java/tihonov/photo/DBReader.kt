@@ -5,11 +5,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.Handler
 import android.os.Looper
-import java.net.URL
 import android.os.IBinder
-import android.widget.Toast
-
-//import tihonov.photo.MainActivity.Companion.LINK
 
 class DBReader : IntentService("Reader") {
 

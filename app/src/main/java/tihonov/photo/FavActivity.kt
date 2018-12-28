@@ -56,4 +56,12 @@ class FavActivity : AppCompatActivity() {
         bindService(intent, serviceConnection, BIND_AUTO_CREATE)
         startService(intent)
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (bind) {
+            bind = false
+            unbindService(serviceConnection)
+        }
+    }
 }

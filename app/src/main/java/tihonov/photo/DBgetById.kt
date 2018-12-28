@@ -7,7 +7,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.IBinder
 
-
 class DBgetById : IntentService("getById") {
 
     private val handler = Handler(Looper.getMainLooper())

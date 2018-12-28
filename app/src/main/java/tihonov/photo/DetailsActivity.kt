@@ -85,6 +85,12 @@ class DetailsActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListe
 
     override fun onDestroy() {
         super.onDestroy()
+
+        if (bind) {
+            bind = false
+            unbindService(serviceConnection)
+        }
+
         Picasso.get().cancelTag(MainActivity::class.java)
     }
 
