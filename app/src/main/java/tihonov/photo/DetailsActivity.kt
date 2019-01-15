@@ -28,11 +28,7 @@ class DetailsActivity : AppCompatActivity() {
             name.text = intent.getStringExtra("user_name")
             urlStr = intent.getStringExtra("image_url")
 
-            file = File(filesDir, urlStr.hashCode().toString() + ".jpg")
-
-            if (file.exists()) {
-                myImage.setImageBitmap(BitmapFactory.decodeFile(file.absolutePath))
-            } else {
+            if (!bind) {
                 val intent = Intent(this, PhotoLoader::class.java)
                 intent.putExtra(PHOTO_URL, urlStr)
                 bindService(intent, serviceConnection, BIND_AUTO_CREATE)

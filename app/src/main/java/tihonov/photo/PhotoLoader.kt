@@ -19,13 +19,19 @@ class PhotoLoader : IntentService("PhotoLoader") {
         val path = intent!!.getStringExtra(PHOTO_URL)
         val url = URL(path)
         url.openConnection()
-        val bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+        val bmp: Bitmap
 
         val file = File(filesDir, path.hashCode().toString() + ".jpg")
-        file.createNewFile()
-        val stream: FileOutputStream? = FileOutputStream(file)
-        bmp.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        stream?.close()
+
+        if (file.exists()) {
+            bmp = BitmapFactory.decodeFile(file.absolutePath)
+        } else {
+            bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+            file.createNewFile()
+            val stream: FileOutputStream? = FileOutputStream(file)
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            stream?.close()
+        }
 
         handler.post {
             callback(bmp)
@@ -34,6 +40,11 @@ class PhotoLoader : IntentService("PhotoLoader") {
 
     override fun onBind(intent: Intent): IBinder? {
         return MyBinder(this)
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        callback = { }
+        return super.onUnbind(intent)
     }
 
     class MyBinder(private val service: PhotoLoader) : Binder() {
