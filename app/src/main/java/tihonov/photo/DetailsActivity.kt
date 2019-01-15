@@ -1,67 +1,68 @@
 package tihonov.photo
 
+import android.content.ComponentName
+import android.content.Intent
+import android.content.ServiceConnection
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.AsyncTask
 import android.os.Bundle
+import android.os.IBinder
 import android.support.v7.app.AppCompatActivity
 import android.widget.TextView
 import kotlinx.android.synthetic.main.activity_detail.*
-import java.io.IOException
-import java.lang.ref.WeakReference
-import java.net.URL
+import java.io.File
+import java.io.FileOutputStream
 
 class DetailsActivity : AppCompatActivity() {
 
-    private lateinit var downloadTask: DownloadPostsAsyncTask
+    private var urlStr = ""
+    private var bind = false
+    private lateinit var file: File
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
 
-        getIncomingIntent()
-    }
-
-    private fun getIncomingIntent() {
         if (intent.hasExtra("image_url") && intent.hasExtra("user_name")) {
             val name = findViewById<TextView>(R.id.image_description)
             name.text = intent.getStringExtra("user_name")
+            urlStr = intent.getStringExtra("image_url")
 
-            downloadTask = DownloadPostsAsyncTask(WeakReference(this))
-            downloadTask.execute(URL(intent.getStringExtra("image_url")))
+            if (!bind) {
+                val intent = Intent(this, PhotoLoader::class.java)
+                intent.putExtra(PHOTO_URL, urlStr)
+                bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+                startService(intent)
+            }
         }
     }
 
-    private class DownloadPostsAsyncTask(val activity: WeakReference<DetailsActivity>) : AsyncTask<URL, Int, Bitmap>() {
-        override fun onPostExecute(result: Bitmap?) {
-            activity.get()?.image?.setImageBitmap(result)
-        }
+    private var binder: PhotoLoader.MyBinder? = null
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            bind = true
+            binder = service as PhotoLoader.MyBinder
 
-        override fun doInBackground(vararg params: URL): Bitmap {
-            var res: ByteArray?
-            try {
-                val url = params[0]
-                var connection = url.openConnection()
-                connection.connect()
-                while (connection.contentLength < 0) {
-                    connection = url.openConnection()
-                    connection.connect()
-                }
-                res = ByteArray(connection.contentLength)
-                connection.getInputStream().use { iss ->
-                    var p = 0
-                    var r: Int = iss.read(res, p, res!!.size - p)
-                    while (r > 0){
-                        p += r
-                        r = iss.read(res, p, res!!.size - p)
-                    }
-                }
-            } catch (e: IOException) {
-                e.printStackTrace()
-                res = null
+            binder!!.setCallback { p ->
+                myImage.setImageBitmap(p)
             }
-
-            return BitmapFactory.decodeByteArray(res, 0, res!!.size)
         }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            bind = false
+            binder = null
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (bind) {
+            bind = false
+            unbindService(serviceConnection)
+        }
+    }
+
+    companion object {
+        val PHOTO_URL = DetailsActivity::class.java.name + ".photoUrl"
     }
 }

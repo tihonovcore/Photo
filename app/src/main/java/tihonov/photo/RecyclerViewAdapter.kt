@@ -18,7 +18,6 @@ class RecyclerViewAdapter(val context: Context, val userName: ArrayList<String>,
 
     override fun onBindViewHolder(holder: ViewHolder, ind: Int) {
         holder.imageName.text = userName[ind]
-
         holder.parentLayout.setOnClickListener {
             val intent = Intent(context, DetailsActivity::class.java)
             intent.putExtra("image_url", imagesUrl[ind])
